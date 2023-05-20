@@ -1,0 +1,11 @@
+# Ignorar node_modules na pasta web
+web/node_modules/
+
+# Ignorar node_modules na pasta video
+video/node_modules/
+
+# Ignorar a pasta kafka
+kafka/
+
+# Ignorar a pasta zookeeper
+zookeeper/
