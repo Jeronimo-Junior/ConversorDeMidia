@@ -2,7 +2,8 @@ FROM node:14-alpine
 
 WORKDIR /app
 
-RUN npm install --production
+COPY package*.json ./
+RUN npm install
 
 EXPOSE 3000
 

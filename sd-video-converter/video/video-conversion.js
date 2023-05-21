@@ -17,12 +17,13 @@ const consumer = new Consumer(
 );
 
 // Configuração do Nodemailer
-const transporter = nodemailer.createTransport({
-  service: 'Yahoo',
+var transporter = nodemailer.createTransport({
+  host: "sandbox.smtp.mailtrap.io",
+  port: 2525,
   auth: {
-    user: 'video.conversor@yahoo.com',
-    pass: 'Q!W@E#q1w2e3',
-  },
+    user: "731732736202f1",
+    pass: "209ffdb0620065"
+  }
 });
 
 consumer.on('message', async (message) => {
@@ -62,27 +63,29 @@ consumer.on('message', async (message) => {
 const command = `ffmpeg -i "${inputFile}" "${outputFile}"`;
 
   // Executa o comando para converter o vídeo
-  exec(command, (error, stdout, stderr) => {
+  exec(command, (error) => {
+    // Remove o arquivo de entrada
+    fs.unlinkSync(inputFile);
     if (error) {
-      console.error('Erro ao converter o vídeo:', error);
+      console.log('Erro ao converter o vídeo:', error.message);
       sendEmail(email, 'Erro na conversão do vídeo', 'Ocorreu um erro ao converter o vídeo. Por favor, tente novamente mais tarde.');
     } else {
       console.log('Vídeo convertido com sucesso:', outputFile);
-      sendEmail(email, 'Vídeo convertido com sucesso', 'O vídeo foi convertido com sucesso. Você pode baixá-lo no seguinte link:');
+      sendEmail(email, 'Vídeo convertido com sucesso', 'O vídeo foi convertido com sucesso.',outputFile);
     }
-
-    // Remove o arquivo de entrada
-    fs.unlinkSync(inputFile);
   });
 });
 
 // Função para enviar e-mails
-function sendEmail(to, subject, body) {
+function sendEmail(to, subject, body,outputFile) {
   const mailOptions = {
-    from: 'video.conversor@yahoo.com',
-    to,
-    subject,
+    from: 'videoconversor5@gmail.com',
+    to: to,
+    subject: subject,
     text: body,
+    attachments: [
+      {path:outputFile}
+    ]
   };
 
   transporter.sendMail(mailOptions, (error, info) => {
@@ -90,6 +93,7 @@ function sendEmail(to, subject, body) {
       console.error('Erro ao enviar e-mail:', error);
     } else {
       console.log('E-mail enviado:', info.response);
+      fs.unlinkSync(outputFile);
     }
   });
 }
