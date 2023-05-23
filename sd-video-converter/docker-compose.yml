@@ -49,6 +49,28 @@ services:
     depends_on:
       - kafka
 
+  minio:
+    image: minio/minio
+    command: server --console-address ":9090" /data
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    volumes:
+     - minio-data:/data
+    env_file: .env
+  minio-init:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: /bin/sh
+    command: >
+      -c "
+      mc alias set minio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
+      mc mb minio/input-bucket;
+      mc mb minio/output-bucket;
+      "
+
 volumes:
   web:
   video:
+  minio-data:
