@@ -2,6 +2,7 @@ const express = require('express');
 const kafka = require('kafka-node');
 const bodyParser = require('body-parser');
 const multer = require('multer');
+const Minio = require('minio');
 
 const app = express();
 const port = 3000;
@@ -40,9 +41,26 @@ app.post('/upload', upload.single('video'), (req, res) => {
   const file = req.file; // Acessa o arquivo enviado
   const email = req.body.email;
   const format = req.body.format;
-  
-  console.log(file, email, format);
-  // Lógica para enviar para o Kafka
+
+  // Send the file to the MinIO input bucket
+  const minioClient = new Minio.Client({
+    endPoint: 'minio',
+    port: 9000,
+    useSSL: false,
+    accessKey: 'root',
+    secretKey: '12345678'
+  });
+
+  const uploadStream = minioClient.putObject('input-bucket', file.originalname, file.buffer, file.size, (err, etag) => {
+    if (err) {
+      console.error('Erro ao enviar arquivo para o MinIO:', err);
+      res.status(500).send('Erro ao enviar arquivo para o MinIO');
+    } else {
+      console.log('Arquivo enviado para o MinIO:', file.originalname);
+    }
+  });
+
+  // Send the filename to Kafka
   const kafkaHost = 'kafka:9092';
   const kafkaTopic = 'video-topic';
 
@@ -52,7 +70,7 @@ app.post('/upload', upload.single('video'), (req, res) => {
   const payloads = [
     {
       topic: kafkaTopic,
-      messages: JSON.stringify({ file, email, format }),
+      messages: JSON.stringify({ filename: file.originalname, email, format }),
     },
   ];
 

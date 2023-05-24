@@ -3,6 +3,7 @@ const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
+const Minio = require('minio');
 
 const kafkaHost = 'kafka:9092';
 const kafkaTopic = 'video-topic';
@@ -16,6 +17,15 @@ const consumer = new Consumer(
   { autoCommit: true }
 );
 
+// Configuração do cliente do MinIO
+const minioClient = new Minio.Client({
+  endPoint: 'minio',
+  port: 9000,
+  useSSL: false,
+  accessKey: 'root',
+  secretKey: 'minio_password'
+});
+
 // Configuração do Nodemailer
 var transporter = nodemailer.createTransport({
   host: "sandbox.smtp.mailtrap.io",
@@ -27,8 +37,8 @@ var transporter = nodemailer.createTransport({
 });
 
 consumer.on('message', async (message) => {
-  const { file, email, format } = JSON.parse(message.value);
-  console.log(file.originalname)
+  const { filename, email, format } = JSON.parse(message.value);
+  console.log(filename)
   console.log(email)
   console.log(format)
   // Define o diretório de entrada e saída dos vídeos
@@ -47,7 +57,7 @@ consumer.on('message', async (message) => {
   // Salva o arquivo de entrada no diretório correspondente
   const inputFile = path.join(inputDir, file.originalname);
   try {
-    const fileData = Buffer.from(file.buffer, 'base64');
+    const fileData = minioClient.getObject('input-bucket',filename);
     fs.writeFileSync(inputFile, fileData);
     console.log('Arquivo salvo:', inputFile);
   } catch (error) {
@@ -55,23 +65,52 @@ consumer.on('message', async (message) => {
     return;
   }
 
+  
   // Define o caminho e o nome do arquivo de saída convertido
   const outputFilename = `${file.originalname.split('.').shift()}.${format}`;
   const outputFile = path.join(outputDir, outputFilename);
 
- // Comando para realizar a conversão do vídeo usando o FFMpeg (é necessário tê-lo instalado)
-const command = `ffmpeg -i "${inputFile}" "${outputFile}"`;
+ 
+
+  // Comando para realizar a conversão do vídeo usando o FFMpeg (é necessário tê-lo instalado)
+  const command = `ffmpeg -i "${inputFile}" "${outputFile}"`;
 
   // Executa o comando para converter o vídeo
+  
   exec(command, (error) => {
-    // Remove o arquivo de entrada
-    fs.unlinkSync(inputFile);
     if (error) {
       console.log('Erro ao converter o vídeo:', error.message);
-      sendEmail(email, 'Erro na conversão do vídeo', 'Ocorreu um erro ao converter o vídeo. Por favor, tente novamente mais tarde.');
     } else {
       console.log('Vídeo convertido com sucesso:', outputFile);
-      sendEmail(email, 'Vídeo convertido com sucesso', 'O vídeo foi convertido com sucesso.',outputFile);
+    }
+  });
+
+  //
+  const outputBucket = 'output-bucket';
+  const objectName = outputFilename;
+  const fileStream = fs.createReadStream(outputFile);
+
+  minioClient.putObject(outputBucket, objectName, fileStream, (error) => {
+    // Remove the input file from the input bucket
+    fs.unlinkSync(inputFile);
+
+    if (error) {
+      console.log('Error uploading file to MinIO:', error);
+      sendEmail(email, 'Error uploading converted file', 'An error occurred while uploading the converted file. Please try again later.');
+    } else {
+      console.log('File uploaded to MinIO:', objectName);
+
+      // Generate a temporary download URL for the file
+      const expiryTime = 24 * 60 * 60; // 24 hours in seconds
+      minioClient.presignedGetObject(outputBucket, objectName, expiryTime, (error, presignedUrl) => {
+        if (error) {
+          console.log('Error generating presigned URL:', error);
+          sendEmail(email, 'Error generating download link', 'An error occurred while generating the download link for the converted file. Please try again later.');
+        } else {
+          console.log('Presigned URL:', presignedUrl);
+          sendEmail(email, 'File converted and uploaded', `Your file has been converted and uploaded. Download it using the following link (valid for 24 hours): ${presignedUrl}`);
+        }
+      });
     }
   });
 });
@@ -83,9 +122,6 @@ function sendEmail(to, subject, body,outputFile) {
     to: to,
     subject: subject,
     text: body,
-    attachments: [
-      {path:outputFile}
-    ]
   };
 
   transporter.sendMail(mailOptions, (error, info) => {
