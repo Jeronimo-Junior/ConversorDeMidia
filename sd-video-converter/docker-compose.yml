@@ -33,7 +33,7 @@ services:
     build:
       context: ./web
     ports:
-      - 3000:3000
+      - 23000:3000
     volumes:
       - ./web:/app
       - /app/node_modules
@@ -50,11 +50,11 @@ services:
       - kafka
 
   minio:
-    image: minio/minio
-    command: server --console-address ":9090" /data
+    image: quay.io/minio/minio
+    command: server --console-address ":9001" /data
     ports:
       - "9000:9000"
-      - "9090:9090"
+      - "9001:9001"
     volumes:
      - minio-data:/data
     env_file: .env
