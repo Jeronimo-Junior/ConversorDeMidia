@@ -27,7 +27,7 @@ services:
     image: confluentinc/cp-kafka:latest
     depends_on:
       - kafka
-    command: "bash -c 'until echo Waiting for Kafka to be ready... && nc -zv kafka 9092; do sleep 1; done && kafka-topics --create --topic video-topic --partitions 1 --replication-factor 1 --if-not-exists --bootstrap-server kafka:9092'"
+    command: "bash -c 'until echo Waiting for Kafka to be ready... && nc -zv kafka 9092; do sleep 1; done && kafka-topics --create --topic video-input --partitions 1 --replication-factor 1 --if-not-exists --bootstrap-server kafka:9092 && kafka-topics --create --topic video-output --partitions 1 --replication-factor 1 --if-not-exists --bootstrap-server kafka:9092'"
 
   web:
     build:
@@ -70,7 +70,18 @@ services:
       mc mb minio/output-bucket;
       "
 
+  mysql:
+      image: mysql:latest
+      ports:
+        - "3306:3306"
+      volumes:
+        - mysql-data:/var/lib/mysql
+      environment:
+        MYSQL_ROOT_PASSWORD: root
+        MYSQL_DATABASE: db
+
 volumes:
   web:
   video:
   minio-data:
+  mysql-data:

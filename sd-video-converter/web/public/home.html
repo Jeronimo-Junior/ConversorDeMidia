@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css">
+  <title>Home</title>
+</head>
+<body>
+  <div class="container">
+    <h1 class="text-center">Home</h1>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+      <div class="mb-3">
+        <label for="video" class="form-label">Selecione um vídeo</label>
+        <input type="file" class="form-control" id="video" name="video">
+      </div>
+      <div class="mb-3">
+        <label for="format" class="form-label">Selecione o formato</label>
+        <select class="form-select" id="format" name="format">
+          <option value="mp4">MP4</option>
+          <option value="avi">AVI</option>
+          <option value="mkv">MKV</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">Enviar</button>
+    </form>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

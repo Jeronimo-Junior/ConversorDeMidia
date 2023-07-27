@@ -7,11 +7,16 @@
         "start": "node server.js"
     },
     "dependencies": {
+        "bcrypt": "^5.1.0",
         "body-parser": "^1.20.2",
+        "connect-ensure-login": "^0.1.1",
         "dotenv": "^16.0.3",
         "express": "^4.17.1",
+        "express-session": "^1.17.3",
         "kafka-node": "^5.0.0",
-        "minio": "^7.1.0",
-        "multer": "^1.4.5-lts.1"
+        "kafkajs": "^2.2.4",
+        "minio": "^7.1.1",
+        "multer": "^1.4.5-lts.1",
+        "mysql2": "^3.5.2"
     }
 }
